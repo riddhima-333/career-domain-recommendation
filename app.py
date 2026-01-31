@@ -10,32 +10,72 @@ if "predicted" not in st.session_state:
 st.markdown(
     """
     <style>
+    /* Import cyber / futuristic font */
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
+
+    /* App background */
     .stApp {
-        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        background: radial-gradient(circle at top, #1a2a6c, #000000);
         color: white;
     }
 
+    /* Main content container */
+    .block-container {
+        border: 1px solid #00f2ff;
+        box-shadow: 0 0 20px #00f2ff55;
+        border-radius: 16px;
+        padding: 2rem;
+        background: rgba(0, 0, 0, 0.6);
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: rgba(0, 0, 0, 0.75);
+        border-right: 1px solid #00f2ff55;
+    }
+
+    /* Main title */
+    h1 {
+        font-family: 'Orbitron', sans-serif !important;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        text-shadow: 0 0 12px rgba(0, 242, 255, 0.6);
+    }
+
+    /* Section headers */
+    h2, h3 {
+        font-family: 'Orbitron', sans-serif !important;
+        letter-spacing: 1px;
+        color: #00f2ff;
+    }
+
+    /* Input fields */
     textarea, input {
-        background-color: #1f2933 !important;
+        background-color: rgba(31, 41, 51, 0.95) !important;
         color: white !important;
         border-radius: 8px;
+        border: 1px solid #00f2ff55;
     }
 
+    /* Buttons */
     .stButton > button {
-        background-color: #ff4b4b;
+        background: linear-gradient(90deg, #ff0080, #7928ca);
         color: white;
-        border-radius: 8px;
+        border-radius: 12px;
         font-weight: bold;
+        border: none;
+        box-shadow: 0 0 12px #ff008055;
     }
 
     .stButton > button:hover {
-        background-color: #ff6b6b;
-        color: white;
+        box-shadow: 0 0 18px #7928ca;
+        transform: scale(1.02);
     }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 # -------------------------
 # Sidebar
@@ -79,52 +119,69 @@ domain_descriptions = {
 # -------------------------
 st.subheader("👤 Your Profile")
 
-age = st.number_input("Age", min_value=18, max_value=60, value=22)
+col1, col2 = st.columns(2)
 
-education = st.selectbox(
-    "Highest Education Level",
-    ["Bachelor's", "Master's", "PhD"]
-)
+with col1:
+    age = st.number_input("Age", min_value=18, max_value=60, value=22)
+    education = st.selectbox(
+        "Highest Education Level",
+        ["Bachelor's", "Master's", "PhD"]
+    )
 
-skills = st.text_area(
-    "Skills",
-    placeholder="e.g. Python, Machine Learning, SQL, Power BI"
-)
+with col2:
+    skills = st.text_area(
+        "Skills",
+        placeholder="e.g. Python, Machine Learning, SQL"
+    )
+    interests = st.text_area(
+        "Interests",
+        placeholder="e.g. Data Science, AI"
+    )
 
-interests = st.text_area(
-    "Interests",
-    placeholder="e.g. Data Science, AI, Business Strategy"
-)
-
-st.caption(
-    "💡 Recommendations are based on learned patterns from historical profiles "
-    "and may vary for interdisciplinary backgrounds."
-)
 # -------------------------
 # Prediction
 # -------------------------
-if st.button("Predict Career Domain"):
-    st.session_state.predicted = True
-    input_data = pd.DataFrame([{
-        "Age": age,
-        "Education": education,
-        "Skills": skills,
-        "Interests": interests
-    }])
+if st.button("🚀 Get Career Recommendation"):
+    with st.spinner("Analyzing your profile..."):
+        import time
+        time.sleep(1)
 
-    probs = model.predict_proba(input_data)[0]
-    classes = model.classes_
+        st.session_state.predicted = True
 
-    top_indices = probs.argsort()[-2:][::-1]
+        input_data = pd.DataFrame([{
+            "Age": age,
+            "Education": education,
+            "Skills": skills,
+            "Interests": interests
+        }])
 
-    top_1 = classes[top_indices[0]]
-    conf_1 = probs[top_indices[0]] * 100
+        probs = model.predict_proba(input_data)[0]
+        classes = model.classes_
 
-    top_2 = classes[top_indices[1]]
-    conf_2 = probs[top_indices[1]] * 100
+        top_indices = probs.argsort()[-2:][::-1]
+
+        top_1 = classes[top_indices[0]]
+        conf_1 = probs[top_indices[0]] * 100
+
+        top_2 = classes[top_indices[1]]
+        conf_2 = probs[top_indices[1]] * 100
 
     st.success(f"🎯 **Primary Recommendation:** {top_1} ({conf_1:.1f}%)")
     st.info(f"🔎 **Alternative Option:** {top_2} ({conf_2:.1f}%)")
+
+    st.subheader("📊 Confidence Distribution")
+
+    confidence_df = (
+        pd.DataFrame({
+            "Domain": classes,
+            "Confidence": probs * 100
+        })
+        .sort_values("Confidence", ascending=False)
+        .head(5)
+    )
+
+    st.bar_chart(confidence_df.set_index("Domain"))
+
 
     st.markdown(
         """
@@ -145,7 +202,7 @@ if st.button("Predict Career Domain"):
     st.write(domain_descriptions.get(top_2))
 
  # -------------------------
-# Feedback (AFTER prediction)
+# Feedback 
 # -------------------------
 if st.session_state.predicted:
     st.markdown("### 📝 Feedback")
